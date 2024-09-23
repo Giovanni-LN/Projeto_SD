@@ -16,14 +16,14 @@ export class PagamentoService {
       ingressoSchema.parse({ nome, data, horario, fileira, assento });
 
       // Buscar a sessão com base no nome, data e horário
-      const sessao = await prisma.sessao.findFirst({
+      const sessao = await prisma.session.findFirst({
         where: {
           nome,
-          data: new Date(data), // Converter string de data para o formato Date
-          horario,
+          date: new Date(data), // Converter string de data para o formato Date
+          time: new Date(`${data}T${horario}`), // Formatar o horário corretamente
         },
         include: {
-          assentos: true, // Incluir os assentos relacionados
+          seats: true, // Incluir os assentos relacionados
         },
       });
 
@@ -35,10 +35,10 @@ export class PagamentoService {
       const positionNumber = `${fileira}${assento}`;
 
       // Verificar se o assento está disponível
-      const assentoDisponivel = await prisma.assento.findFirst({
+      const assentoDisponivel = await prisma.seat.findFirst({
         where: {
           positionNumber,
-          sessaoId: sessao.id,
+          sessionId: sessao.id, // Usar sessionId ao invés de sessaoId
           status: 'LIVRE', // Apenas assentos livres
         },
       });
@@ -48,7 +48,7 @@ export class PagamentoService {
       }
 
       // Simulação de pagamento (aqui pode integrar com um gateway real)
-      const pagamentoBemSucedido = true;
+      const pagamentoBemSucedido = true; // Aqui você pode integrar com um serviço real
       if (!pagamentoBemSucedido) {
         throw new Error("Falha no pagamento.");
       }
@@ -61,14 +61,15 @@ export class PagamentoService {
 
       return { sucesso: true, mensagem: "Pagamento realizado com sucesso.", assento: positionNumber };
     } catch (error) {
-      throw error;
+      console.error("Erro ao comprar ingresso:", error);
+      throw error; // Re-lançar o erro para o tratamento externo
     }
   }
 
   async marcarAssentosComoOcupados(assentosIds) {
     try {
       // Atualiza o status dos assentos para "OCUPADO"
-      const assentosOcupados = await prisma.assento.updateMany({
+      const assentosOcupados = await prisma.seat.updateMany({
         where: {
           id: { in: assentosIds },
           status: 'LIVRE', // Apenas assentos livres podem ser marcados como ocupados
@@ -84,6 +85,7 @@ export class PagamentoService {
 
       return assentosOcupados;
     } catch (error) {
+      console.error("Erro ao marcar assentos como ocupados:", error);
       throw error;
     }
   }
@@ -91,7 +93,7 @@ export class PagamentoService {
   async registrarPagamentos(assentosIds) {
     try {
       const pagamentos = assentosIds.map((assentoId) => ({
-        assentoId, // Relacionar o pagamento ao assento
+        seatId: assentoId, // Relacionar o pagamento ao assento
       }));
 
       // Criar os registros de pagamento no banco de dados
@@ -99,6 +101,7 @@ export class PagamentoService {
         data: pagamentos,
       });
     } catch (error) {
+      console.error("Erro ao registrar pagamentos:", error);
       throw error;
     }
   }

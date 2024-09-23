@@ -7,37 +7,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Assento {
-  id             Int           @id @default(autoincrement())
-  fileira        String        
-  numero         Int           
-  positionNumber String        @unique // Suporta 'A1', 'B2', etc.
-  status         statusAssento @default(LIVRE)
-  pagamentos     Pagamento[]
-  price          Decimal
-
-  sessao         Sessao        @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
-  sessaoId       Int
-
-  @@map("assentos")
+model TheaterPiece {
+  id        Int        @id @default(autoincrement())
+  name      String
+  sessions  Session[]  // Lista de sessões (datas e horários) para a peça
 }
 
-model Sessao {
-  id        Int        @id @default(autoincrement())
-  nome      String
-  data      DateTime
-  horario   String
-  assentos  Assento[]
+model Session {
+  id             Int       @id @default(autoincrement())
+  date           DateTime  // Data da apresentação
+  time           DateTime  // Horário da apresentação
+  theaterPieceId Int
+  theaterPiece   TheaterPiece @relation(fields: [theaterPieceId], references: [id])
+  seats          Seat[]    // Lista de assentos
+}
 
-  @@map("sessoes")
+model Seat {
+  id         Int      @id @default(autoincrement())
+  row        String   // Linha do assento (A, B, C, D, E, F, G)
+  number     Int      // Número do assento
+  status     String   // Status do assento (livre, ocupado)
+  sessionId  Int
+  session    Session  @relation(fields: [sessionId], references: [id])
+  pagamentos Pagamento[]
 }
 
 model Pagamento {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) @map("created_at")
 
-  assento   Assento @relation(fields: [assentoId], references: [id], onDelete: Cascade)
-  assentoId Int     // Removido @unique para permitir múltiplos pagamentos
+  seat      Seat     @relation(fields: [seatId], references: [id], onDelete: Cascade)
+  seatId    Int      // Removido @unique para permitir múltiplos pagamentos
 
   @@map("pagamentos")
 }
