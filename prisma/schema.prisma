@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,7 +9,9 @@ datasource db {
 
 model Assento {
   id             Int           @id @default(autoincrement())
-  positionNumber String        @unique // Alterado para String para suportar o formato 'A1', 'B2', etc.
+  fileira        String        
+  numero         Int           
+  positionNumber String        @unique // Suporta 'A1', 'B2', etc.
   status         statusAssento @default(LIVRE)
   pagamentos     Pagamento[]
   price          Decimal
@@ -29,7 +25,7 @@ model Assento {
 model Sessao {
   id        Int        @id @default(autoincrement())
   nome      String
-  data      DateTime   // Adicionado campo data
+  data      DateTime
   horario   String
   assentos  Assento[]
 
@@ -41,7 +37,7 @@ model Pagamento {
   createdAt DateTime @default(now()) @map("created_at")
 
   assento   Assento @relation(fields: [assentoId], references: [id], onDelete: Cascade)
-  assentoId Int     @unique @map("assento_id")
+  assentoId Int     // Removido @unique para permitir múltiplos pagamentos
 
   @@map("pagamentos")
 }
