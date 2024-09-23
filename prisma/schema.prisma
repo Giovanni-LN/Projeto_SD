@@ -15,12 +15,25 @@ datasource db {
 
 model Assento {
   id             Int           @id @default(autoincrement())
-  positionNumber Int           @unique
+  positionNumber String        @unique // Alterado para String para suportar o formato 'A1', 'B2', etc.
   status         statusAssento @default(LIVRE)
   pagamentos     Pagamento[]
   price          Decimal
 
+  sessao         Sessao        @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+  sessaoId       Int
+
   @@map("assentos")
+}
+
+model Sessao {
+  id        Int        @id @default(autoincrement())
+  nome      String
+  data      DateTime   // Adicionado campo data
+  horario   String
+  assentos  Assento[]
+
+  @@map("sessoes")
 }
 
 model Pagamento {
