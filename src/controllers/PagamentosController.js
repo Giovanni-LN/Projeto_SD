@@ -1,4 +1,4 @@
-import { PagamentoService } from "../services/PagamentoService.js"; // Importa o serviço de pagamento
+import { PagamentoService } from "../services/pagamentos.js"; // Importa o serviço de pagamento
 
 // Controller para lidar com requisições HTTP
 export class PagamentoController {

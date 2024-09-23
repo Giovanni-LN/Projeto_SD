@@ -3,41 +3,44 @@ import { prisma } from "../prismaClient.js"; // Importa o Prisma Client Singleto
 
 // Schema de validação para os dados de Assento usando Zod
 const assentoSchema = z.object({
-  positionNumber: z.number().int("positionNumber deve ser um número inteiro."),
+  positionNumber: z.string("positionNumber deve ser uma string."), // Deve ser uma string, não um número
   price: z.number("price deve ser um número flutuante."),
 });
 
 const sessaoSchema = z.object({
   nome: z.string().min(1, "O título do filme é obrigatório."),
-  sessaoId: z.number().int("sessaoId deve ser um número inteiro."),
   data: z.string().min(1, "A data da sessão é obrigatória."),
   horario: z.string().min(1, "O horário da sessão é obrigatório."),
 });
 
 export class SessaoService {
-  async createSessao({ nome, sessaoId, data, horario, assentos }) {
+  async createSessao({ nome, data, horario, assentos }) {
     try {
       // Validação dos dados da sessão
-      sessaoSchema.parse({ nome, sessaoId, data, horario });
-
+      sessaoSchema.parse({ nome, data, horario });
+  
+      // Formatar a data e hora corretamente
+      const dataHora = new Date(`${data}T${horario}`);
+  
       // Criação da sessão no banco de dados
       const sessao = await prisma.sessao.create({
         data: {
           nome,
-          sessaoId,
-          data,
+          data: dataHora, // Usando o objeto Date
           horario,
         },
       });
-
+  
       // Criar os assentos para a sessão
       const assentoService = new AssentoService();
       await assentoService.createAssentosParaSessao({
         sessaoId: sessao.id, // Relaciona os assentos à sessão
+        assentos // Passa os assentos aqui
       });
-
+  
       return sessao;
     } catch (error) {
+      console.error("Erro ao criar sessão:", error);
       throw error;
     }
   }
@@ -71,9 +74,10 @@ export class SessaoService {
 
       // Retorna as filas organizadas com os assentos
       return assentosPorFila;
-      } catch (error) {
-        throw error;
-      }
+    } catch (error) {
+      console.error("Erro ao listar assentos:", error);
+      throw error;
+    }
   }
 
   async getDatasEHorasPorNome({ nome }) {
@@ -108,6 +112,7 @@ export class SessaoService {
 
       return datasEHoras;
     } catch (error) {
+      console.error("Erro ao obter datas e horários:", error);
       throw error;
     }
   }
@@ -142,46 +147,29 @@ export class SessaoService {
 
       return statusPorFila;
     } catch (error) {
+      console.error("Erro ao obter status dos assentos:", error);
       throw error;
     }
   }
 }
 
 export class AssentoService {  
-  async createAssentosParaSessao({ sessaoId }) {
-    const filas = {
-      A: 12,
-      B: 12,
-      C: 12,
-      D: 12,
-      E: 10,
-      F: 8,
-      G: 6,
-    };
-
-    try {
-      // Cria um array de assentos com números de posição e filas
-      const assentos = [];
-      Object.entries(filas).forEach(([fila, quantidade]) => {
-        for (let i = 1; i <= quantidade; i++) {
-          assentos.push({
-            positionNumber: `${fila}${i}`, // Ex: A1, A2, ..., G6
-            price: 10, // Preço padrão
-            sessaoId, // Relaciona cada assento à sessão
-            status: 'LIVRE', // Define o status inicial como livre
-          });
-        }
-      });
-
-      // Cria os assentos no banco de dados
-      const assentosCriados = await prisma.assento.createMany({
-        data: assentos,
-      });
-
-      return assentosCriados;
-    } catch (error) {
-      throw error;
+  async createAssentosParaSessao({ sessaoId, assentos }) {
+    if (!sessaoId) {
+      throw new Error("sessaoId is required");
     }
+
+    const assentosParaCriar = assentos.map(assento => ({
+      ...assento,
+      sessaoId, // Associar o sessaoId corretamente
+      status: 'LIVRE',
+    }));
+
+    console.log("Criando assentos:", assentosParaCriar); // Log para verificar assentos que serão criados
+
+    return await prisma.assento.createMany({
+      data: assentosParaCriar,
+    });
   }
 
   async verificarDisponibilidadeAssento({ positionNumber, sessaoId }) {
@@ -192,13 +180,14 @@ export class AssentoService {
           sessaoId,
         },
       });
-  
+
       if (assento && assento.status === 'LIVRE') {
         return assento;
       } else {
         throw new Error('Assento indisponível.');
       }
     } catch (error) {
+      console.error("Erro ao verificar disponibilidade do assento:", error);
       throw error;
     }
   }
@@ -206,9 +195,8 @@ export class AssentoService {
   async findByPositionNumber({ positionNumber }) {
     // Valida a entrada positionNumber
     try {
-      z.number()
-        .int("positionNumber deve ser um número inteiro.")
-        .parse(positionNumber);
+      z.string()
+        .parse(positionNumber); // Deve ser uma string, não um número
 
       // Busca o assento no banco de dados
       const assento = await prisma.assento.findFirst({
@@ -220,6 +208,7 @@ export class AssentoService {
       return assento;
     } catch (error) {
       // Retorna o erro de validação se houver
+      console.error("Erro ao encontrar assento por positionNumber:", error);
       throw error;
     }
   }
