@@ -1,22 +1,24 @@
-import "express-async-errors";
-import express from "express";
-import { AppError } from "./utils/AppError.js";
-import { routes } from "./routes/index.js";
 import cors from "cors";
+import express from "express";
+import "express-async-errors";
 import { prisma } from "./prismaClient.js"; // Prisma Client singleton
+import { routes } from "./routes/index.js";
+import { AppError } from "./utils/AppError.js";
 
-const app = express(); // iniciando app node com express
+const app = express(); // Iniciando app node com express
 
 const corsOptions = {
   origin: "*",
 };
 
-app.use(cors(corsOptions)); // tornando a api acessível a diversas origens
+app.use(cors(corsOptions)); // Tornando a API acessível a diversas origens
+app.use(express.json()); // Middleware apenas para JSON
 
-app.use(express.json()); // fazendo os middlewares apenas trabalhar com json e suas formatações
+app.use(routes); // Usando todas as minhas rotas
 
-app.use(routes); // usando todas as minhas rotas
 app.use((error, req, res, next) => {
+  console.error(error); // Log do erro para monitoramento
+
   // Verifica se o erro é do Zod (validação de schema)
   if (error.name === "ZodError") {
     return res.status(400).json({
@@ -33,10 +35,14 @@ app.use((error, req, res, next) => {
     });
   }
 
+  console.error("Internal server error:", error);
+
   // Retorna um erro genérico para qualquer outro tipo de erro
   return res.status(500).json({
-    status: 500,
-    message: "Internal server error",
+    error: {
+      message: "Internal server error",
+      status: 500,
+    }
   });
 });
 

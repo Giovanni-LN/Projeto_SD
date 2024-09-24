@@ -7,37 +7,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Assento {
-  id             Int           @id @default(autoincrement())
-  fileira        String        
-  numero         Int           
-  positionNumber String        @unique // Suporta 'A1', 'B2', etc.
-  status         statusAssento @default(LIVRE)
-  pagamentos     Pagamento[]
-  price          Decimal
+model PlayItem {
+  id       Int      @id @default(autoincrement())
+  nome     String   // Nome da peça
+  imageUrl String   // URL da imagem da peça
+  sessoes  Sessao[] // Relação com as sessões (datas e horários)
 
-  sessao         Sessao        @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
-  sessaoId       Int
-
-  @@map("assentos")
+  @@map("play_items")
 }
 
 model Sessao {
-  id        Int        @id @default(autoincrement())
-  nome      String
-  data      DateTime
-  horario   String
-  assentos  Assento[]
+  id        Int       @id @default(autoincrement())
+  data      DateTime  // Data da sessão
+  horario   String    // Horário da sessão
+  assentos  Assento[] // Relação com os assentos da sessão
+  pagamentos Pagamento[] // Relação com os pagamentos desta sessão
+  playItem  PlayItem  @relation(fields: [playItemId], references: [id], onDelete: Cascade)
+  playItemId Int      // Chave estrangeira para PlayItem (peça)
 
   @@map("sessoes")
 }
 
-model Pagamento {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now()) @map("created_at")
+model Assento {
+  id             Int           @id @default(autoincrement())
+  positionNumber String        @unique // Ex: 'A1', 'B2', etc., único para cada assento
+  status         statusAssento @default(LIVRE) // Enum para definir se está LIVRE ou OCUPADO
+  sessao         Sessao        @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+  sessaoId       Int           // Chave estrangeira para Sessao (data e horário)
+  pagamentos     Pagamento[]   // Relação com Pagamento
 
-  assento   Assento @relation(fields: [assentoId], references: [id], onDelete: Cascade)
-  assentoId Int     // Removido @unique para permitir múltiplos pagamentos
+  @@map("assentos")
+}
+
+model Pagamento {
+  id        Int         @id @default(autoincrement())
+  createdAt DateTime    @default(now()) @map("created_at") // Data de criação do pagamento
+  assentos  Assento[]   // Lista de assentos comprados neste pagamento
+  sessao    Sessao      @relation(fields: [sessaoId], references: [id], onDelete: Cascade) // Sessão da peça (data e horário)
+  sessaoId  Int         // Chave estrangeira para Sessao
 
   @@map("pagamentos")
 }
