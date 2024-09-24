@@ -1,14 +1,17 @@
 import { prisma } from '../prismaClient.js';
 
-const getAssentos = async () => {
-  return await prisma.assento.findMany();
-};
-
-const updateAssentoStatus = async (id, status) => {
-  return await prisma.assento.update({
-    where: { id },
-    data: { status },
+const getAssentosBySessao = async (sessaoId) => {
+  return await prisma.assento.findMany({
+    where: { sessaoId },
   });
 };
 
-export const assentoService = { getAssentos, updateAssentoStatus };
+const updateAssentosStatus = async (ids, status) => {
+  const updates = ids.map(id => prisma.assento.update({
+    where: { id },
+    data: { status },
+  }));
+  return await Promise.all(updates);
+};
+
+export const assentoService = { getAssentosBySessao, updateAssentosStatus };

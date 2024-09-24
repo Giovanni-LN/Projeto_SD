@@ -9,7 +9,7 @@ datasource db {
 
 model PlayItem {
   id       Int      @id @default(autoincrement())
-  nome     String   // Nome da peça
+  nome     String   @unique // Nome da peça deve ser único
   imageUrl String   // URL da imagem da peça
   sessoes  Sessao[] // Relação com as sessões (datas e horários)
 

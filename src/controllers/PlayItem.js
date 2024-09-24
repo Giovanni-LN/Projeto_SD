@@ -20,10 +20,15 @@ const createPlayItem = async (req, res, next) => { // Mantido 'req' para acesso 
   }
 };
 
-const getPlayItemById = async (req, res, next) => {
-  const { id } = req.params; // Mantido para obter o ID
+const getPlayItemByNome = async (req, res, next) => {
+  const { nome } = req.query;
+
+  if (!nome) {
+    return next(new AppError("Missing query parameter: nome", 400));
+  }
+
   try {
-    const playItem = await playItemService.getPlayItemById(id);
+    const playItem = await playItemService.getPlayItemByNome(nome);
     res.json(playItem);
   } catch (error) {
     next(new AppError("Play item not found", 404));
@@ -40,4 +45,4 @@ const deletePlayItem = async (req, res, next) => {
   }
 };
 
-export default { createPlayItem, getAllPlayItems, getPlayItemById, deletePlayItem };
+export default { createPlayItem, getAllPlayItems, getPlayItemByNome, deletePlayItem };

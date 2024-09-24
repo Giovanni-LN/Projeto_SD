@@ -2,18 +2,29 @@ import { prisma } from '../prismaClient.js';
 import { AppError } from '../utils/AppError.js';
 
 const getPlayItems = async () => {
-  return await prisma.playItem.findMany();
+  return await prisma.playItem.findMany({
+    include: {
+      sessoes: true,
+    },
+  });
 };
 
 const createPlayItem = async (data) => {
   return await prisma.playItem.create({ data });
 };
 
-const getPlayItemById = async (id) => {
-  const playItem = await prisma.playItem.findUnique({ where: { id: parseInt(id) } }); // Certifique-se de que o ID seja um número
+const getPlayItemByNome = async (nome) => {
+  const playItem = await prisma.playItem.findUnique({
+    where: { nome },
+    include: {
+      sessoes: true,
+    },
+  });
+
   if (!playItem) {
-    throw new AppError("Play item not found", 404);
+    throw new AppError("PlayItem not found", 404);
   }
+
   return playItem;
 };
 
@@ -25,4 +36,4 @@ const deletePlayItem = async (id) => {
 };
 
 
-export const playItemService = { createPlayItem, getPlayItemById, getPlayItems, deletePlayItem };
+export const playItemService = { createPlayItem, getPlayItemByNome, getPlayItems, deletePlayItem };

@@ -8,9 +8,8 @@ router.get('/', playItemController.getAllPlayItems);
 
 // Rota para criar um novo play item
 router.post('/', playItemController.createPlayItem);
-
-// Rota para obter um play item específico pelo ID
-router.get('/:id', playItemController.getPlayItemById);
+// Rota para obter um play item específico pelo nome
+router.get('/search', playItemController.getPlayItemByNome);
 
 // Rota para deletar um play item pelo ID
 router.delete('/:id', playItemController.deletePlayItem);

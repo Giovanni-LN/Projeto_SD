@@ -4,7 +4,8 @@ import assentoController from '../controllers/Assento.js'; // Ajuste o caminho s
 const router = express.Router();
 
 // Rotas para assentos
-router.get('/', assentoController.getAllAssentos); // Obter todos os assentos
-router.put('/:id', assentoController.updateAssento); // Atualizar o status de um assento específico
+router.get('/:sessaoId', assentoController.getAssentosBySessao); // Obter assentos de uma sessão específica
+router.put('/atualizar', assentoController.updateAssentos); // Atualizar o status de múltiplos assentos
+
 
 export default router; // Exporta o router

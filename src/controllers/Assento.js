@@ -1,35 +1,32 @@
 import { assentoService } from "../services/Assento.js";
 import { AppError } from "../utils/AppError.js";
 
-// Controlador para obter todos os assentos
-const getAllAssentos = async (req, res, next) => {
+// Controlador para obter assentos de uma sessão específica
+const getAssentosBySessao = async (req, res, next) => {
+  const { sessaoId } = req.params;
+
   try {
-    const assentos = await assentoService.getAssentos();
+    const assentos = await assentoService.getAssentosBySessao(Number(sessaoId));
     res.json(assentos);
   } catch (error) {
-    next(new AppError("Error fetching seats", 500)); // Passa erro para o middleware de erro
+    next(new AppError("Error fetching seats for the session", 500));
   }
 };
 
-// Controlador para atualizar o status de um assento
-const updateAssento = async (req, res, next) => {
-  const { id } = req.params;
-  const { status } = req.body;
+// Controlador para atualizar o status de múltiplos assentos
+const updateAssentos = async (req, res, next) => {
+  const { ids, status } = req.body;
 
-  // Validação básica
-  if (!status) {
-    return next(new AppError("Status is required", 400)); // Retorna erro se status não for fornecido
+  if (!ids || !Array.isArray(ids) || !status) {
+    return next(new AppError("Valid ids array and status are required", 400)); // Retorna erro se não forem fornecidos
   }
 
   try {
-    const updatedAssento = await assentoService.updateAssentoStatus(Number(id), status);
-    if (!updatedAssento) {
-      return next(new AppError("Assento not found", 404)); // Retorna erro se o assento não for encontrado
-    }
-    res.json(updatedAssento);
+    const updatedAssentos = await assentoService.updateAssentosStatus(ids, status);
+    res.json(updatedAssentos);
   } catch (error) {
-    next(new AppError("Error updating seat", 500)); // Passa erro para o middleware de erro
+    next(new AppError("Error updating seats", 500)); // Passa erro para o middleware de erro
   }
 };
 
-export default { getAllAssentos, updateAssento };
+export default { getAssentosBySessao, updateAssentos };
