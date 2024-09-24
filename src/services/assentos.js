@@ -3,12 +3,12 @@ import { prisma } from "../prismaClient.js"; // Importa o Prisma Client Singleto
 
 // Schema de validação para os dados de Assento usando Zod
 const assentoSchema = z.object({
-  positionNumber: z.string().min(1, "positionNumber deve ser uma string não vazia."),
-  status: z.enum(["LIVRE", "OCUPADO"], "status deve ser 'LIVRE' ou 'OCUPADO'."), // Enum para status
+  positionNumber: z.string("positionNumber deve ser uma string."), // Deve ser uma string, não um número
+  price: z.number("price deve ser um número flutuante."),
 });
 
 const sessaoSchema = z.object({
-  nome: z.string().min(1, "O título da sessão é obrigatório."),
+  nome: z.string().min(1, "O título do filme é obrigatório."),
   data: z.string().min(1, "A data da sessão é obrigatória."),
   horario: z.string().min(1, "O horário da sessão é obrigatório."),
 });
@@ -18,26 +18,26 @@ export class SessaoService {
     try {
       // Validação dos dados da sessão
       sessaoSchema.parse({ nome, data, horario });
-
+  
       // Formatar a data e hora corretamente
-      const dataHora = new Date(`${data}T${horario}`); // Deve ser um DateTime
-
+      const dataHora = new Date(`${data}T${horario}`);
+  
       // Criação da sessão no banco de dados
-      const sessao = await prisma.session.create({
+      const sessao = await prisma.sessao.create({
         data: {
           nome,
-          date: dataHora, // Usando o objeto Date para a data
-          time: dataHora, // Usando o mesmo para o horário
+          data: dataHora, // Usando o objeto Date
+          horario,
         },
       });
-
+  
       // Criar os assentos para a sessão
       const assentoService = new AssentoService();
       await assentoService.createAssentosParaSessao({
         sessaoId: sessao.id, // Relaciona os assentos à sessão
-        assentos, // Passa os assentos aqui
+        assentos // Passa os assentos aqui
       });
-
+  
       return sessao;
     } catch (error) {
       console.error("Erro ao criar sessão:", error);
@@ -48,13 +48,13 @@ export class SessaoService {
   async listarAssentosPorDiaHora({ data, horario }) {
     try {
       // Busca a sessão com base no dia e no horário
-      const sessao = await prisma.session.findFirst({
+      const sessao = await prisma.sessao.findFirst({
         where: {
-          date: new Date(data), // Converte a string 'data' para o formato Date
-          time: new Date(`${data}T${horario}`), // Formata o horário
+          data: new Date(data), // Converte a string 'data' para o formato Date
+          horario: horario,
         },
         include: {
-          seats: true, // Inclui os assentos relacionados à sessão
+          assentos: true, // Inclui os assentos relacionados à sessão
         },
       });
 
@@ -63,8 +63,8 @@ export class SessaoService {
       }
 
       // Organiza os assentos por fila
-      const assentosPorFila = sessao.seats.reduce((acc, assento) => {
-        const fila = assento.row; // A linha do assento
+      const assentosPorFila = sessao.assentos.reduce((acc, assento) => {
+        const fila = assento.positionNumber[0]; // A primeira letra indica a fila (ex: 'A', 'B', 'C')
         if (!acc[fila]) {
           acc[fila] = [];
         }
@@ -83,16 +83,16 @@ export class SessaoService {
   async getDatasEHorasPorNome({ nome }) {
     try {
       // Busca todas as sessões com o nome da peça especificado
-      const sessoes = await prisma.session.findMany({
+      const sessoes = await prisma.sessao.findMany({
         where: {
           nome: nome,
         },
         select: {
-          date: true,
-          time: true,
+          data: true,
+          horario: true,
         },
         orderBy: {
-          date: 'asc', // Ordena por data
+          data: 'asc', // Ordena por data
         }
       });
 
@@ -102,11 +102,11 @@ export class SessaoService {
 
       // Organiza as sessões por data
       const datasEHoras = sessoes.reduce((acc, sessao) => {
-        const data = sessao.date.toISOString().split('T')[0]; // Extrai apenas a parte da data (yyyy-mm-dd)
+        const data = sessao.data.toISOString().split('T')[0]; // Extrai apenas a parte da data (yyyy-mm-dd)
         if (!acc[data]) {
           acc[data] = [];
         }
-        acc[data].push(sessao.time); // Armazena o horário
+        acc[data].push(sessao.horario);
         return acc;
       }, {});
 
@@ -120,14 +120,14 @@ export class SessaoService {
   async getStatusAssentosPorNomeDataHora({ nome, data, horario }) {
     try {
       // Busca a sessão com base no nome, data e horário
-      const sessao = await prisma.session.findFirst({
+      const sessao = await prisma.sessao.findFirst({
         where: {
           nome: nome,
-          date: new Date(data), // Converte a string 'data' para o formato Date
-          time: new Date(`${data}T${horario}`), // Formata o horário
+          data: new Date(data), // Converte a string 'data' para o formato Date
+          horario: horario,
         },
         include: {
-          seats: true, // Inclui os assentos relacionados à sessão
+          assentos: true, // Inclui os assentos relacionados à sessão
         },
       });
 
@@ -136,12 +136,12 @@ export class SessaoService {
       }
 
       // Organiza os assentos por fila e status
-      const statusPorFila = sessao.seats.reduce((acc, assento) => {
-        const fila = assento.row; // A linha do assento
+      const statusPorFila = sessao.assentos.reduce((acc, assento) => {
+        const fila = assento.positionNumber[0]; // A primeira letra indica a fila (ex: 'A', 'B', 'C')
         if (!acc[fila]) {
           acc[fila] = [];
         }
-        acc[fila].push({ positionNumber: assento.positionNumber, status: assento.status }); // Armazena o status do assento
+        acc[fila].push(assento.status); // Armazena o status do assento
         return acc;
       }, {});
 
@@ -153,35 +153,31 @@ export class SessaoService {
   }
 }
 
-export class AssentoService {
+export class AssentoService {  
   async createAssentosParaSessao({ sessaoId, assentos }) {
     if (!sessaoId) {
-      throw new Error("sessaoId é obrigatório");
+      throw new Error("sessaoId is required");
     }
 
-    const assentosParaCriar = assentos.map(assento => {
-      // Validação do assento
-      assentoSchema.parse(assento);
-      return {
-        ...assento,
-        sessionId: sessaoId, // Associar o sessionId corretamente
-        status: 'LIVRE', // Status padrão ao criar
-      };
-    });
+    const assentosParaCriar = assentos.map(assento => ({
+      ...assento,
+      sessaoId, // Associar o sessaoId corretamente
+      status: 'LIVRE',
+    }));
 
     console.log("Criando assentos:", assentosParaCriar); // Log para verificar assentos que serão criados
 
-    return await prisma.seat.createMany({
+    return await prisma.assento.createMany({
       data: assentosParaCriar,
     });
   }
 
-  async verificarDisponibilidadeAssento({ positionNumber, sessionId }) {
+  async verificarDisponibilidadeAssento({ positionNumber, sessaoId }) {
     try {
-      const assento = await prisma.seat.findFirst({
+      const assento = await prisma.assento.findFirst({
         where: {
           positionNumber,
-          sessionId,
+          sessaoId,
         },
       });
 
@@ -199,10 +195,11 @@ export class AssentoService {
   async findByPositionNumber({ positionNumber }) {
     // Valida a entrada positionNumber
     try {
-      z.string().parse(positionNumber); // Deve ser uma string, não um número
+      z.string()
+        .parse(positionNumber); // Deve ser uma string, não um número
 
       // Busca o assento no banco de dados
-      const assento = await prisma.seat.findFirst({
+      const assento = await prisma.assento.findFirst({
         where: {
           positionNumber,
         },
@@ -218,7 +215,7 @@ export class AssentoService {
 
   async listAll() {
     // Lista todos os assentos sem validação, já que não há entradas
-    const assento = await prisma.seat.findMany({});
+    const assento = await prisma.assento.findMany({});
     return assento;
   }
 }

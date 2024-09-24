@@ -3,22 +3,22 @@ import { AssentoService, SessaoService } from "../services/assentos.js";
 export class AssentosController {
   // Método para criar uma nova sessão com assentos
   async create(request, response) {
-    const { nome, sessionId, data, horario, seats } = request.body; // Renomeado 'assentos' para 'seats'
+    const { nome, sessaoId, data, horario, assentos } = request.body;
+
     const sessaoService = new SessaoService();
 
     try {
       // Cria uma nova sessão com os assentos
       const newSessao = await sessaoService.createSessao({
         nome,
-        sessionId, // Ajuste para sessionId
+        sessaoId,
         data,
         horario,
-        seats, // Ajuste para seats
+        assentos,
       });
 
       return response.status(201).json(newSessao);
     } catch (error) {
-      console.error("Erro ao criar sessão:", error);
       return response.status(400).json({ error: error.message });
     }
   }
@@ -31,7 +31,6 @@ export class AssentosController {
       const assentos = await assentoService.listAll();
       return response.status(200).json(assentos);
     } catch (error) {
-      console.error("Erro ao listar assentos:", error);
       return response.status(500).json({ error: 'Erro ao listar assentos.' });
     }
   }
@@ -48,7 +47,6 @@ export class AssentosController {
       }
       return response.status(200).json(assento);
     } catch (error) {
-      console.error("Erro ao encontrar assento:", error);
       return response.status(400).json({ error: error.message });
     }
   }
@@ -66,7 +64,6 @@ export class AssentosController {
 
       return response.status(200).json(assentos);
     } catch (error) {
-      console.error("Erro ao listar assentos para o dia e hora:", error);
       return response.status(500).json({ error: 'Erro ao listar assentos para o dia e hora.' });
     }
   }
@@ -83,7 +80,6 @@ export class AssentosController {
 
       return response.status(200).json(datasEHoras);
     } catch (error) {
-      console.error("Erro ao obter datas e horários:", error);
       return response.status(400).json({ error: error.message });
     }
   }
@@ -102,7 +98,6 @@ export class AssentosController {
 
       return response.status(200).json(statusAssentos);
     } catch (error) {
-      console.error("Erro ao obter status dos assentos:", error);
       return response.status(400).json({ error: error.message });
     }
   }
